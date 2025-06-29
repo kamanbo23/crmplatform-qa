@@ -36,6 +36,8 @@ class User(Base):
     interests = Column(JsonList, default=[])
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    last_login = Column(DateTime, nullable=True)
+    login_count = Column(Integer, default=0)
 
     # Relationships for tasks
     assigned_tasks = relationship("Task", foreign_keys="[Task.assigned_to_id]", back_populates="assigned_to_user")

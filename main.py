@@ -140,6 +140,11 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    # Update login stats
+    user.last_login = datetime.utcnow()
+    user.login_count = (user.login_count or 0) + 1
+    db.commit()
+
     # Check if user is admin
     is_admin = user.role == "admin"
     
@@ -189,6 +194,25 @@ def get_all_users(db: Session = Depends(get_db)):
     Useful for assigning tasks.
     """
     return db.query(models.User).all()
+
+@app.get("/api/users/engagement", response_model=List[schemas.UserEngagement])
+def get_user_engagement(db: Session = Depends(get_db), current_admin: models.User = Depends(get_current_admin_user)):
+    """
+    Admin-only endpoint to get user engagement data.
+    """
+    # This is a placeholder implementation.
+    # You can expand this to calculate real engagement metrics.
+    users = db.query(models.User).all()
+    engagement_data = []
+    for user in users:
+        engagement_data.append({
+            "id": user.id,
+            "username": user.username,
+            "last_login": user.last_login,
+            "login_count": user.login_count if hasattr(user, 'login_count') else 0, # Example metric
+            "posts_created": 0 # Example metric
+        })
+    return engagement_data
 
 # Contact Management
 @app.get("/api/contacts", response_model=List[schemas.Contact])

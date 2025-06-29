@@ -174,8 +174,19 @@ class User(UserBase):
     role: str
     interests: List[str] = []
     created_at: datetime
+    last_login: Optional[datetime] = None
     assigned_tasks: List[Task] = []
     created_tasks: List[Task] = []
+
+    class Config:
+        from_attributes = True
+
+class UserEngagement(BaseModel):
+    id: int
+    username: str
+    last_login: Optional[datetime] = None
+    login_count: int
+    posts_created: int
 
     class Config:
         from_attributes = True
