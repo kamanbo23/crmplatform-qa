@@ -70,8 +70,8 @@ class ContactBase(BaseModel):
 
 class ContactCreate(ContactBase):
     tags: Optional[List[str]] = []
-    role: Optional[str] = "member"  # Default role
-    create_user_account: Optional[bool] = True  # Flag to create user account
+    role: Optional[str] = "member"
+    create_user_account: Optional[bool] = False
 
 class ContactTag(BaseModel):
     id: int
@@ -85,7 +85,7 @@ class Contact(ContactBase):
     created_at: datetime
     tags: List[ContactTag] = []
     user_id: Optional[int] = None
-    user: Optional["UserSimple"] = None  # Include user information
+    user: Optional['UserSimple'] = None
 
     class Config:
         from_attributes = True
@@ -107,23 +107,6 @@ class UserSimple(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class UserAdmin(BaseModel):
-    id: int
-    username: str
-    full_name: str
-    email: str
-    role: str
-    is_active: bool
-    plain_password: Optional[str] = None
-    last_login: Optional[datetime] = None
-    login_count: int = 0
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
 
 class TaskBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
@@ -198,38 +181,17 @@ class User(UserBase):
     is_active: bool
     role: str
     interests: List[str] = []
-    created_at: datetime
+    logins: int = 0
+    rsvps: int = 0
+    mentor_requests: int = 0
     last_login: Optional[datetime] = None
-    assigned_tasks: List[Task] = []
-    created_tasks: List[Task] = []
-
-    class Config:
-        from_attributes = True
-
-class UserEngagement(BaseModel):
-    user_id: int
-    username: str
-    full_name: str
-    role: str
-    logins: int
-    rsvps: int
-    mentor_requests: int
-    last_login: Optional[datetime]
+    plain_password: Optional[str] = None  # For admin visibility
     created_at: datetime
+    assigned_tasks: List['Task'] = []
+    created_tasks: List['Task'] = []
 
     class Config:
         from_attributes = True
-
-
-class EngagementStats(BaseModel):
-    total_users: int
-    active_users_this_month: int
-    total_logins: int
-    total_rsvps: int
-    total_mentor_requests: int
-    top_mentors_by_requests: List[dict]
-    recent_activity: List[dict]
-
 
 class UserLogin(BaseModel):
     username_or_email: str = Field(..., min_length=3)
@@ -391,8 +353,88 @@ class MentorUpdate(MentorBase):
 
 class Mentor(MentorBase):
     id: int
+    contact_requests: int = 0
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+# Engagement Tracking Schemas
+class EventRSVPBase(BaseModel):
+    event_id: int
+    email: str
+    rsvp_status: str = "confirmed"  # confirmed, declined, maybe
+
+class EventRSVPCreate(EventRSVPBase):
+    pass
+
+class EventRSVP(EventRSVPBase):
+    id: int
+    user_id: Optional[int] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class MentorContactRequestBase(BaseModel):
+    mentor_id: int
+    contact_name: str
+    contact_email: str
+    contact_major: Optional[str] = None
+    contact_year: Optional[str] = None
+    reason: str
+
+class MentorContactRequestCreate(MentorContactRequestBase):
+    pass
+
+class MentorContactRequest(MentorContactRequestBase):
+    id: int
+    user_id: Optional[int] = None
+    status: str = "pending"
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class LoginSessionBase(BaseModel):
+    user_id: int
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
+class LoginSessionCreate(LoginSessionBase):
+    pass
+
+class LoginSession(LoginSessionBase):
+    id: int
+    login_time: datetime
+
+    class Config:
+        from_attributes = True
+
+# Engagement Dashboard Schemas
+class EngagementStats(BaseModel):
+    total_users: int
+    active_users_this_month: int
+    total_logins: int
+    total_rsvps: int
+    total_mentor_requests: int
+    top_mentors_by_requests: List[dict]
+    recent_activity: List[dict]
+
+class UserEngagement(BaseModel):
+    user_id: int
+    username: str
+    full_name: str
+    role: str
+    logins: int
+    rsvps: int
+    mentor_requests: int
+    last_login: Optional[datetime]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+Task.model_rebuild()
+User.model_rebuild()

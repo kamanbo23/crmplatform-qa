@@ -35,14 +35,24 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     role = Column(String, default="member")  # Added role for Admin/Member
     interests = Column(JsonList, default=[])
+    logins = Column(Integer, default=0)
+    rsvps = Column(Integer, default=0)
+    mentor_requests = Column(Integer, default=0)  # Track mentor contact requests
+    last_login = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    last_login = Column(DateTime, nullable=True)
-    login_count = Column(Integer, default=0)
 
     # Relationships for tasks
     assigned_tasks = relationship("Task", foreign_keys="[Task.assigned_to_id]", back_populates="assigned_to_user")
     created_tasks = relationship("Task", foreign_keys="[Task.created_by_id]", back_populates="created_by_user")
+    
+    # Relationship to the Contact record
+    contact = relationship("Contact", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    
+    # Engagement tracking relationships
+    login_sessions = relationship("LoginSession", back_populates="user")
+    event_rsvps = relationship("EventRSVP", back_populates="user")
+    mentor_contact_requests = relationship("MentorContactRequest", back_populates="user")
 
 
 class Contact(Base):
@@ -55,7 +65,7 @@ class Contact(Base):
     
     # Link to the auto-created user account
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, unique=True)
-    user = relationship("User")
+    user = relationship("User", back_populates="contact")
 
     tags = relationship("Tag", secondary="contact_tags", back_populates="contacts")
 
@@ -103,6 +113,23 @@ class Event(Base):
     location = Column(String, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+    # Engagement tracking
+    rsvps = relationship("EventRSVP", back_populates="event")
+
+class EventRSVP(Base):
+    __tablename__ = "event_rsvps"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Can be null for anonymous RSVPs
+    email = Column(String, nullable=False)  # Store email for both members and non-members
+    rsvp_status = Column(String, default='confirmed')  # confirmed, declined, maybe
+    created_at = Column(DateTime, server_default=func.now())
+    
+    # Relationships
+    event = relationship("Event", back_populates="rsvps")
+    user = relationship("User", back_populates="event_rsvps")
 
 class Mentor(Base):
     __tablename__ = "research_opportunities"
@@ -117,8 +144,42 @@ class Mentor(Base):
     location = Column(String, nullable=True)
     is_virtual = Column(Boolean, default=False)
     tags = Column(Text, nullable=True)
+    contact_requests = Column(Integer, default=0)  # Track number of contact requests
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    
+    # Engagement tracking
+    contact_requests_list = relationship("MentorContactRequest", back_populates="mentor")
+
+class MentorContactRequest(Base):
+    __tablename__ = "mentor_contact_requests"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    mentor_id = Column(Integer, ForeignKey("research_opportunities.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Can be anonymous
+    contact_name = Column(String, nullable=False)
+    contact_email = Column(String, nullable=False)
+    contact_major = Column(String, nullable=True)
+    contact_year = Column(String, nullable=True)
+    reason = Column(Text, nullable=False)
+    status = Column(String, default='pending')  # pending, approved, declined
+    created_at = Column(DateTime, server_default=func.now())
+    
+    # Relationships
+    mentor = relationship("Mentor", back_populates="contact_requests_list")
+    user = relationship("User", back_populates="mentor_contact_requests")
+
+class LoginSession(Base):
+    __tablename__ = "login_sessions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    login_time = Column(DateTime, server_default=func.now())
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    
+    # Relationships
+    user = relationship("User", back_populates="login_sessions")
 
 class Newsletter(Base):
     __tablename__ = "newsletters"
@@ -130,47 +191,3 @@ class Newsletter(Base):
     publish_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
-
-
-# --- Engagement Tracking Models ---
-
-class LoginSession(Base):
-    __tablename__ = "login_sessions"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    login_time = Column(DateTime, server_default=func.now())
-    ip_address = Column(String, nullable=True)
-    user_agent = Column(String, nullable=True)
-
-    # Relationship
-    user = relationship("User")
-
-
-class EventRSVP(Base):
-    __tablename__ = "event_rsvps"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
-    rsvp_status = Column(String, nullable=False)  # 'yes', 'no', 'maybe'
-    rsvp_time = Column(DateTime, server_default=func.now())
-
-    # Relationships
-    user = relationship("User")
-    event = relationship("Event")
-
-
-class MentorContactRequest(Base):
-    __tablename__ = "mentor_contact_requests"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    mentor_id = Column(Integer, ForeignKey("contacts.id"), nullable=False)
-    contact_reason = Column(Text, nullable=False)
-    request_time = Column(DateTime, server_default=func.now())
-    status = Column(String, default='pending')  # 'pending', 'approved', 'rejected'
-
-    # Relationships
-    user = relationship("User")
-    mentor = relationship("Contact")
