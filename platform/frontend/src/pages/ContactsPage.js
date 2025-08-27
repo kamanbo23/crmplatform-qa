@@ -533,14 +533,14 @@ export default function ContactsPage() {
             {isAdmin && (
               <>
                 <Tooltip title="Edit Contact">
-                  <IconButton size="small" color="primary" onClick={() => openDialog(params.row)}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
+            <IconButton size="small" color="primary" onClick={() => openDialog(params.row)}>
+              <EditIcon fontSize="small" />
+            </IconButton>
                 </Tooltip>
                 <Tooltip title="Delete Contact">
-                  <IconButton size="small" color="error" onClick={() => handleDelete(params.row.id)}>
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
+            <IconButton size="small" color="error" onClick={() => handleDelete(params.row.id)}>
+              <DeleteIcon fontSize="small" />
+            </IconButton>
                 </Tooltip>
               </>
             )}
@@ -561,7 +561,7 @@ export default function ContactsPage() {
           </Typography>
         </Grid>
         {isAdmin && (
-          <Grid item>
+        <Grid item>
             <Stack direction="row" spacing={1}>
               <Button
                 variant="outlined"
@@ -737,8 +737,8 @@ export default function ContactsPage() {
                        💼 Business
                      </Button>
                   </Stack>
-                </Grid>
-                
+      </Grid>
+
                 {/* Selection Actions */}
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" gutterBottom>🎯 Selection Actions</Typography>

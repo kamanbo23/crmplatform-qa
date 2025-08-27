@@ -1084,6 +1084,81 @@ def send_email_to_contacts(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
 
+# --- RSVP Endpoints ---
+
+@app.post("/api/events/{event_id}/rsvp/public")
+def public_rsvp_for_event(
+    event_id: int,
+    rsvp_data: schemas.EventRSVPCreate,
+    db: Session = Depends(get_db)
+):
+    """Public RSVP for an event (no authentication required)"""
+    try:
+        # Check if event exists
+        event = db.query(models.Event).filter(models.Event.id == event_id).first()
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+        
+        # Check if email already RSVP'd for this event
+        existing_rsvp = db.query(models.EventRSVP).filter(
+            models.EventRSVP.event_id == event_id,
+            models.EventRSVP.email == rsvp_data.email
+        ).first()
+        
+        if existing_rsvp:
+            # Update existing RSVP
+            existing_rsvp.rsvp_status = rsvp_data.rsvp_status
+            db.commit()
+            return {"message": "RSVP updated successfully"}
+        
+        # Check if email belongs to a registered user
+        user = db.query(models.User).filter(models.User.email == rsvp_data.email).first()
+        
+        # Create new RSVP
+        rsvp = models.EventRSVP(
+            event_id=event_id,
+            user_id=user.id if user else None,
+            email=rsvp_data.email,
+            rsvp_status=rsvp_data.rsvp_status
+        )
+        db.add(rsvp)
+        
+        # If user exists, update their RSVP count
+        if user:
+            user.rsvps += 1
+        
+        db.commit()
+        
+        return {
+            "message": "RSVP recorded successfully",
+            "is_member": user is not None,
+            "user_id": user.id if user else None
+        }
+    except Exception as e:
+        print(f"RSVP Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to record RSVP")
+
+@app.get("/api/events/{event_id}/rsvps", response_model=List[schemas.EventRSVP], dependencies=[Depends(get_current_admin_user)])
+def get_event_rsvps(
+    event_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get all RSVPs for a specific event (admin only)"""
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    rsvps = db.query(models.EventRSVP).filter(
+        models.EventRSVP.event_id == event_id
+    ).options(
+        joinedload(models.EventRSVP.user)
+    ).order_by(models.EventRSVP.created_at.desc()).all()
+    
+    return rsvps
+
 # --- Health Check ---
 
 @app.get("/health", tags=["System"])

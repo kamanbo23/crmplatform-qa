@@ -35,6 +35,7 @@ import {
   CheckCircle,
 } from '@mui/icons-material';
 import api from '../services/api';
+import RSVPModal from '../components/RSVPModal';
 
 export default function PublicEventsPage() {
   const [events, setEvents] = useState([]);
@@ -44,6 +45,8 @@ export default function PublicEventsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [selectedTab, setSelectedTab] = useState(0);
+  const [rsvpModalOpen, setRsvpModalOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     fetchEvents();
@@ -128,8 +131,18 @@ export default function PublicEventsPage() {
   };
 
   const handleRSVP = (event) => {
-    // In a real application, this would handle RSVP functionality
-    alert(`RSVP functionality for "${event.title}" would be implemented here.`);
+    setSelectedEvent(event);
+    setRsvpModalOpen(true);
+  };
+
+  const handleRSVPSuccess = (rsvpData) => {
+    console.log('RSVP successful:', rsvpData);
+    // Optionally refresh events or show success message
+  };
+
+  const handleCloseRSVPModal = () => {
+    setRsvpModalOpen(false);
+    setSelectedEvent(null);
   };
 
   const formatDate = (dateString) => {
@@ -426,6 +439,14 @@ export default function PublicEventsPage() {
           </Paper>
         </Box>
       </Container>
+
+      {/* RSVP Modal */}
+      <RSVPModal
+        open={rsvpModalOpen}
+        onClose={handleCloseRSVPModal}
+        event={selectedEvent}
+        onSuccess={handleRSVPSuccess}
+      />
     </Box>
   );
 } 

@@ -20,7 +20,10 @@ export default function TasksPage() {
     try {
       const res = isAdmin ? await api.get('/api/tasks') : await api.get('/api/users/me/tasks');
       setTasks(res.data);
-    } catch { setSnackbar({ open:true, message:'Failed to load tasks', severity:'error'}); }
+    } catch (error) { 
+      console.error('Error fetching tasks:', error);
+      setSnackbar({ open:true, message:'Failed to load tasks', severity:'error'}); 
+    }
   };
   const fetchUsers = async () => { if(!isAdmin) return; try { const res = await api.get('/api/users'); setUsers(res.data); } catch {} };
   useEffect(()=>{ fetchTasks(); fetchUsers(); }, []);

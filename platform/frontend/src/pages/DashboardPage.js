@@ -49,6 +49,8 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
   
+
+  
   const [stats, setStats] = useState({
     contacts: 0,
     mentors: 0,
@@ -79,11 +81,37 @@ export default function DashboardPage() {
         ]);
       } else {
         // Regular members get personalized data
-        [eventsRes, tasksRes, newslettersRes] = await Promise.all([
-          api.get('/api/users/me/events'), // User's RSVP'd events
-          api.get('/api/users/me/tasks'),  // User's assigned tasks
-          api.get('/api/newsletters'),
-        ]);
+        try {
+          console.log('Fetching member-specific data for user:', user);
+          console.log('User token:', localStorage.getItem('token'));
+          
+          // Test the tasks endpoint specifically
+          try {
+            const tasksTest = await api.get('/api/users/me/tasks');
+            console.log('Tasks API response:', tasksTest.data);
+          } catch (taskError) {
+            console.error('Tasks API error:', taskError);
+          }
+          
+          [eventsRes, tasksRes, newslettersRes] = await Promise.all([
+            api.get('/api/users/me/events'), // User's RSVP'd events
+            api.get('/api/users/me/tasks'),  // User's assigned tasks
+            api.get('/api/newsletters'),
+          ]);
+          console.log('Member data fetched successfully:', {
+            events: eventsRes.data.length,
+            tasks: tasksRes.data.length,
+            newsletters: newslettersRes.data.length
+          });
+        } catch (memberError) {
+          console.warn('Member-specific endpoints failed, using fallback data:', memberError);
+          // Fallback: use public endpoints for members
+          [eventsRes, tasksRes, newslettersRes] = await Promise.all([
+            api.get('/api/events'), // All events as fallback
+            Promise.resolve({ data: [] }), // No tasks for members if endpoint fails
+            api.get('/api/newsletters'),
+          ]);
+        }
         
         // Set default values for admin-only data
         contactsRes = { data: [] };
@@ -116,7 +144,21 @@ export default function DashboardPage() {
 
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
-      setError('Failed to load dashboard data');
+      // Set default data for members when API fails
+      if (!isAdmin) {
+        setStats({
+          contacts: 0,
+          mentors: 0,
+          events: 0,
+          tasks: 0,
+          newsletters: 0,
+        });
+        setRecentTasks([]);
+        setUpcomingEvents([]);
+        setError(null); // Don't show error for members, just show empty dashboard
+      } else {
+        setError('Failed to load dashboard data');
+      }
     } finally {
       setLoading(false);
     }
@@ -125,6 +167,11 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // Add refresh function
+  const handleRefresh = () => {
+    fetchDashboardData();
+  };
 
   const StatCard = ({ title, value, icon, color, onClick, trend }) => (
     <Card 
@@ -376,6 +423,7 @@ export default function DashboardPage() {
                 <Refresh />
               </IconButton>
             </Tooltip>
+
           </Box>
         </Box>
       </Paper>
@@ -417,7 +465,7 @@ export default function DashboardPage() {
               icon={<Event />}
               color="#2e7d32"
               trend={15}
-              onClick={() => navigate('/admin/events')}
+              onClick={() => navigate(isAdmin ? '/admin/events' : '/events')}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4} lg={2}>
@@ -427,7 +475,7 @@ export default function DashboardPage() {
               icon={<Assignment />}
               color="#ed6c02"
               trend={-5}
-              onClick={() => navigate('/admin/tasks')}
+              onClick={() => navigate(isAdmin ? '/admin/tasks' : '/tasks')}
             />
           </Grid>
           <Grid item xs={12} sm={6} md={4} lg={2}>
@@ -496,7 +544,7 @@ export default function DashboardPage() {
                   description="Discover and RSVP to upcoming startup events"
                   icon={<Event />}
                   color="#2e7d32"
-                  onClick={() => navigate('/admin/events')}
+                  onClick={() => navigate('/events')}
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={4}>
@@ -505,7 +553,7 @@ export default function DashboardPage() {
                   description="View and manage your assigned tasks"
                   icon={<Assignment />}
                   color="#ed6c02"
-                  onClick={() => navigate('/admin/tasks')}
+                  onClick={() => navigate('/tasks')}
                 />
               </Grid>
               <Grid item xs={12} sm={6} md={4}>
@@ -514,7 +562,7 @@ export default function DashboardPage() {
                   description="Browse the community contacts directory"
                   icon={<People />}
                   color="#1976d2"
-                  onClick={() => navigate('/admin/contacts')}
+                  onClick={() => navigate('/contacts')}
                 />
               </Grid>
             </>
@@ -548,14 +596,26 @@ export default function DashboardPage() {
                   </Box>
                 }
                 action={
-                  <Button 
-                    size="small" 
-                    variant="outlined"
-                    onClick={() => navigate('/tasks')}
-                    sx={{ borderRadius: 2 }}
-                  >
-                    View All
-                  </Button>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <IconButton 
+                      size="small"
+                      onClick={handleRefresh}
+                      sx={{ 
+                        color: '#ed6c02',
+                        '&:hover': { bgcolor: '#ed6c0210' }
+                      }}
+                    >
+                      <Refresh fontSize="small" />
+                    </IconButton>
+                    <Button 
+                      size="small" 
+                      variant="outlined"
+                      onClick={() => navigate(isAdmin ? '/admin/tasks' : '/tasks')}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      View All
+                    </Button>
+                  </Box>
                 }
                 sx={{ pb: 1 }}
               />
@@ -605,9 +665,14 @@ export default function DashboardPage() {
                 ) : (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
                     <Assignment sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-                    <Typography variant="body2" color="textSecondary">
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
                       No recent tasks
                     </Typography>
+                    {!isAdmin && (
+                      <Typography variant="caption" color="textSecondary">
+                        New tasks assigned to you will appear here. Click the refresh button to check for updates.
+                      </Typography>
+                    )}
                   </Box>
                 )}
               </CardContent>
@@ -637,7 +702,7 @@ export default function DashboardPage() {
                   <Button 
                     size="small" 
                     variant="outlined"
-                    onClick={() => navigate('/events')}
+                    onClick={() => navigate(isAdmin ? '/admin/events' : '/events')}
                     sx={{ borderRadius: 2 }}
                   >
                     View All

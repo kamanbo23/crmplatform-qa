@@ -382,6 +382,57 @@ export default function PublicMentorsPage() {
             <Button
               variant="contained"
               size="large"
+              onClick={() => {
+                const subject = encodeURIComponent('Mentor Application - SpartUp CRM Platform');
+                const body = encodeURIComponent(`Dear Max Rothe,
+
+I am interested in becoming a mentor for the SpartUp CRM platform.
+
+Please find my information below:
+
+**Personal Information:**
+- Name: [Your Full Name]
+- Email: [Your Email Address]
+- Phone: [Your Phone Number]
+
+**Professional Background:**
+- Current Position: [Your Current Role/Title]
+- Organization: [Your Company/Organization]
+- Years of Experience: [Number of years in your field]
+
+**Specialties & Expertise:**
+Please describe your areas of expertise and specialties:
+[Describe your technical skills, industry knowledge, business experience, etc.]
+
+**Mentoring Interests:**
+What areas would you like to mentor in?
+- Startup Strategy & Business Development
+- Technical Skills & Development
+- Marketing & Sales
+- Finance & Fundraising
+- Product Management
+- Legal & Compliance
+- Other: [Please specify]
+
+**Mentoring Preferences:**
+- Preferred mentoring format: [Virtual/In-person/Both]
+- Availability: [Days/times you're available]
+- Commitment level: [Hours per month you can dedicate]
+
+**Why you want to be a mentor:**
+[Share your motivation and what you hope to contribute to the startup ecosystem]
+
+**Relevant Experience:**
+[Describe any previous mentoring, teaching, or leadership experience]
+
+I look forward to contributing to the SpartUp community and helping guide the next generation of entrepreneurs.
+
+Best regards,
+[Your Name]`);
+
+                const mailtoLink = `mailto:max.rothe@sjsu.edu?subject=${subject}&body=${body}`;
+                window.open(mailtoLink, '_blank');
+              }}
               sx={{
                 backgroundColor: 'white',
                 color: 'primary.main',

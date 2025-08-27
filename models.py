@@ -43,6 +43,9 @@ class User(Base):
     # Relationships for tasks
     assigned_tasks = relationship("Task", foreign_keys="[Task.assigned_to_id]", back_populates="assigned_to_user")
     created_tasks = relationship("Task", foreign_keys="[Task.created_by_id]", back_populates="created_by_user")
+    
+    # Relationships for engagement tracking
+    event_rsvps = relationship("EventRSVP", back_populates="user")
 
 
 class Contact(Base):
@@ -103,6 +106,9 @@ class Event(Base):
     location = Column(String, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+    # Relationships for engagement tracking
+    rsvps = relationship("EventRSVP", back_populates="event")
 
 class Mentor(Base):
     __tablename__ = "research_opportunities"
@@ -151,14 +157,15 @@ class EventRSVP(Base):
     __tablename__ = "event_rsvps"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
-    rsvp_status = Column(String, nullable=False)  # 'yes', 'no', 'maybe'
-    rsvp_time = Column(DateTime, server_default=func.now())
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Can be null for anonymous RSVPs
+    email = Column(String, nullable=False)  # Email for both registered and anonymous users
+    rsvp_status = Column(String, default='confirmed')  # confirmed, declined, maybe
+    created_at = Column(DateTime, server_default=func.now())
 
     # Relationships
-    user = relationship("User")
-    event = relationship("Event")
+    user = relationship("User", back_populates="event_rsvps")
+    event = relationship("Event", back_populates="rsvps")
 
 
 class MentorContactRequest(Base):

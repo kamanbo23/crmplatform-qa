@@ -362,7 +362,6 @@ class Mentor(MentorBase):
 
 # Engagement Tracking Schemas
 class EventRSVPBase(BaseModel):
-    event_id: int
     email: str
     rsvp_status: str = "confirmed"  # confirmed, declined, maybe
 

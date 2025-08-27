@@ -230,6 +230,23 @@ class EngagementStats(BaseModel):
     top_mentors_by_requests: List[dict]
     recent_activity: List[dict]
 
+# RSVP Schemas
+class EventRSVPBase(BaseModel):
+    email: str
+    rsvp_status: str = "confirmed"  # confirmed, declined, maybe
+
+class EventRSVPCreate(EventRSVPBase):
+    pass
+
+class EventRSVP(EventRSVPBase):
+    id: int
+    event_id: int
+    user_id: Optional[int] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 
 class UserLogin(BaseModel):
     username_or_email: str = Field(..., min_length=3)

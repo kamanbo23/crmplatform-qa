@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Snackbar, Alert } from '@mui/material';
+import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Snackbar, Alert, List, ListItem, ListItemText, Chip } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
+import { People } from '@mui/icons-material';
 import api from '../services/api';
 
 function getUser() { const u = localStorage.getItem('user'); return u ? JSON.parse(u) : null; }
@@ -13,6 +14,9 @@ export default function EventsPage() {
   const [editEvent, setEditEvent] = useState(null);
   const [form, setForm] = useState({ title: '', description: '', start_date: '', end_date: '', location: '' });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [rsvpModalOpen, setRsvpModalOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [rsvps, setRsvps] = useState([]);
 
   const fetchEvents = async () => {
     try {
@@ -59,6 +63,23 @@ export default function EventsPage() {
     }
   };
 
+  const handleViewRSVPs = async (event) => {
+    try {
+      setSelectedEvent(event);
+      const response = await api.get(`/api/events/${event.id}/rsvps`);
+      setRsvps(response.data);
+      setRsvpModalOpen(true);
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Failed to load RSVPs', severity: 'error' });
+    }
+  };
+
+  const handleCloseRSVPModal = () => {
+    setRsvpModalOpen(false);
+    setSelectedEvent(null);
+    setRsvps([]);
+  };
+
   return (
     <Box sx={{ p: 4 }}>
       <Typography variant="h5" gutterBottom>Events</Typography>
@@ -70,9 +91,17 @@ export default function EventsPage() {
           { field: 'start_date', headerName: 'Start', width: 150 },
           { field: 'end_date', headerName: 'End', width: 150 },
           { field: 'location', headerName: 'Location', width: 150 },
-          isAdmin && { field: 'actions', headerName: 'Actions', width: 200, renderCell: (params) => (
+          isAdmin && { field: 'actions', headerName: 'Actions', width: 300, renderCell: (params) => (
             <>
               <Button size="small" onClick={() => handleOpen(params.row)}>Edit</Button>
+              <Button 
+                size="small" 
+                startIcon={<People />}
+                onClick={() => handleViewRSVPs(params.row)}
+                sx={{ mr: 1 }}
+              >
+                RSVPs
+              </Button>
               <Button size="small" color="error" onClick={() => handleDelete(params.row.id)}>Delete</Button>
             </>
           ) },
@@ -92,6 +121,61 @@ export default function EventsPage() {
           {isAdmin && <Button onClick={handleSave} variant="contained">Save</Button>}
         </DialogActions>
       </Dialog>
+
+      {/* RSVP Modal */}
+      <Dialog open={rsvpModalOpen} onClose={handleCloseRSVPModal} maxWidth="md" fullWidth>
+        <DialogTitle>
+          RSVPs for "{selectedEvent?.title}"
+        </DialogTitle>
+        <DialogContent>
+          {rsvps.length > 0 ? (
+            <List>
+              {rsvps.map((rsvp, index) => (
+                <ListItem key={rsvp.id} divider={index < rsvps.length - 1}>
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="subtitle1">
+                          {rsvp.user?.username || rsvp.email}
+                        </Typography>
+                        <Chip 
+                          label={rsvp.user ? 'Member' : 'Guest'} 
+                          size="small" 
+                          color={rsvp.user ? 'primary' : 'default'}
+                          variant="outlined"
+                        />
+                      </Box>
+                    }
+                    secondary={
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          Email: {rsvp.email}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          RSVP Date: {new Date(rsvp.created_at).toLocaleDateString()}
+                        </Typography>
+                        <Chip 
+                          label={rsvp.rsvp_status} 
+                          size="small" 
+                          color={rsvp.rsvp_status === 'confirmed' ? 'success' : 'warning'}
+                        />
+                      </Box>
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
+          ) : (
+            <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              No RSVPs for this event yet.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseRSVPModal}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={() => setSnackbar({ ...snackbar, open: false })}><Alert severity={snackbar.severity}>{snackbar.message}</Alert></Snackbar>
     </Box>
   );

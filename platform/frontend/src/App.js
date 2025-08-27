@@ -37,10 +37,13 @@ function App() {
           <Route path="/admin/dashboard" element={<PrivateRoute adminOnly={true}><AppLayout><AdminDashboardPage /></AppLayout></PrivateRoute>} />
           <Route path="/admin/users" element={<PrivateRoute adminOnly={true}><AppLayout><UsersPage /></AppLayout></PrivateRoute>} />
           <Route path="/admin/contacts" element={<PrivateRoute><AppLayout><ContactsPage /></AppLayout></PrivateRoute>} />
+          <Route path="/contacts" element={<PrivateRoute><AppLayout><ContactsPage /></AppLayout></PrivateRoute>} />
           <Route path="/admin/mentors" element={<PrivateRoute adminOnly={true}><AppLayout><MentorsPage /></AppLayout></PrivateRoute>} />
           <Route path="/admin/events" element={<PrivateRoute><AppLayout><EventsPage /></AppLayout></PrivateRoute>} />
+          <Route path="/events" element={<PrivateRoute><AppLayout><EventsPage /></AppLayout></PrivateRoute>} />
           <Route path="/admin/newsletters" element={<PrivateRoute adminOnly={true}><AppLayout><NewslettersPage /></AppLayout></PrivateRoute>} />
           <Route path="/admin/tasks" element={<PrivateRoute><AppLayout><TasksPage /></AppLayout></PrivateRoute>} />
+          <Route path="/tasks" element={<PrivateRoute><AppLayout><TasksPage /></AppLayout></PrivateRoute>} />
           
           {/* Redirect authenticated users to dashboard */}
           <Route path="*" element={<Navigate to="/" />} />
